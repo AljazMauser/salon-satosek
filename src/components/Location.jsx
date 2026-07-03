@@ -11,8 +11,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-const position = [45.5698, 15.1889] // Nazorjeva ulica 9, Črnomelj
-const googleMapsUrl = 'https://www.google.com/maps/search/Nazorjeva+ulica+9,+8340+%C4%8Crnomelj'
+const position = [45.5647, 15.1914] // Nazorjeva ulica 9, Črnomelj
+const googleMapsUrl = 'https://www.google.com/maps/place/Nazorjeva+ulica+9,+8340+Črnomelj/@45.5647,15.1914,17z'
 
 export default function Location() {
   return (

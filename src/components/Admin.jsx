@@ -353,7 +353,7 @@ export default function Admin({ token, onLogout }) {
               const isToday = sameDay(dan, new Date())
 
               return (
-                <div key={datumStr} className={`border p-4 md:p-5 transition-colors ${isToday ? 'border-gold-500/40 bg-dark-800' : 'border-dark-700 bg-dark-800/30'}`}>
+                <div key={datumStr} className={`border p-4 md:p-5 transition-colors ${isToday ? 'border-gold-500/40 bg-dark-800' : 'border-dark-700 bg-dark-800/30'} ${isNedelja ? 'opacity-70' : ''}`}>
                   <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                     {/* Dan */}
                     <div className="w-full md:w-40 flex-shrink-0">
@@ -363,60 +363,76 @@ export default function Admin({ token, onLogout }) {
                       </div>
                     </div>
 
-                    {/* Prost dan toggle */}
-                    <button
-                      onClick={() => handleToggleProstDan(datumStr)}
-                      className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border transition-all flex-shrink-0 ${
-                        stanje.prost_dan === 'D'
-                          ? 'bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20'
-                          : 'bg-dark-700 border-dark-600 text-dark-300 hover:border-gold-500/40 hover:text-gold-400'
-                      }`}
-                    >
-                      {stanje.prost_dan === 'D' ? '🔴 Prost dan' : '🟢 Delovni dan'}
-                    </button>
-
-                    {/* Časovni vnosi (samo če ni prost dan) */}
-                    {stanje.prost_dan === 'N' && (
-                      <div className="flex items-center gap-2 md:gap-3 flex-1">
-                        <input
-                          type="time"
-                          value={stanje.od}
-                          onChange={(e) => handleUrejanjeChange(datumStr, 'od', e.target.value)}
-                          className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
-                        />
-                        <span className="text-dark-500 text-sm">do</span>
-                        <input
-                          type="time"
-                          value={stanje.do}
-                          onChange={(e) => handleUrejanjeChange(datumStr, 'do', e.target.value)}
-                          className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
-                        />
+                    {/* Nedelja — vedno zaprto */}
+                    {isNedelja ? (
+                      <div className="flex-1 flex items-center gap-3">
+                        <span className="px-4 py-2 text-xs font-semibold uppercase tracking-wider border bg-red-500/10 border-red-500/50 text-red-400 flex-shrink-0">
+                          🔒 Prosti dan
+                        </span>
+                        <span className="text-dark-500 text-xs">Nedelje so vedno zaprte.</span>
                       </div>
-                    )}
+                    ) : (
+                      <>
+                        {/* Prost dan toggle */}
+                        <button
+                          onClick={() => handleToggleProstDan(datumStr)}
+                          className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border transition-all flex-shrink-0 ${
+                            stanje.prost_dan === 'D'
+                              ? 'bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20'
+                              : 'bg-dark-700 border-dark-600 text-dark-300 hover:border-gold-500/40 hover:text-gold-400'
+                          }`}
+                        >
+                          {stanje.prost_dan === 'D' ? '🔴 Prost dan' : '🟢 Delovni dan'}
+                        </button>
 
-                    {/* Gumbi */}
-                    <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                      <button
-                        onClick={() => handleShraniDan(datumStr)}
-                        disabled={actionLoading === datumStr}
-                        className="px-4 py-2 bg-gold-500 text-dark-900 text-xs font-semibold hover:bg-gold-400 transition-colors disabled:opacity-50"
-                      >
-                        {actionLoading === datumStr ? '...' : 'Shrani'}
-                      </button>
-                      <button
-                        onClick={() => handlePonastaviDan(datumStr)}
-                        disabled={actionLoading === datumStr}
-                        className="px-3 py-2 border border-dark-600 text-dark-400 text-xs hover:text-white hover:border-dark-400 transition-colors disabled:opacity-50"
-                      >
-                        Ponastavi
-                      </button>
-                    </div>
+                        {/* Časovni vnosi (samo če ni prost dan) */}
+                        {stanje.prost_dan === 'N' && (
+                          <div className="flex items-center gap-2 md:gap-3 flex-1">
+                            <input
+                              type="time"
+                              step="1800"
+                              value={stanje.od}
+                              onChange={(e) => handleUrejanjeChange(datumStr, 'od', e.target.value)}
+                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
+                            />
+                            <span className="text-dark-500 text-sm">do</span>
+                            <input
+                              type="time"
+                              step="1800"
+                              value={stanje.do}
+                              onChange={(e) => handleUrejanjeChange(datumStr, 'do', e.target.value)}
+                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
+                            />
+                          </div>
+                        )}
+
+                        {/* Gumbi */}
+                        <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+                          <button
+                            onClick={() => handleShraniDan(datumStr)}
+                            disabled={actionLoading === datumStr}
+                            className="px-4 py-2 bg-gold-500 text-dark-900 text-xs font-semibold hover:bg-gold-400 transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === datumStr ? '...' : 'Shrani'}
+                          </button>
+                          <button
+                            onClick={() => handlePonastaviDan(datumStr)}
+                            disabled={actionLoading === datumStr}
+                            className="px-3 py-2 border border-dark-600 text-dark-400 text-xs hover:text-white hover:border-dark-400 transition-colors disabled:opacity-50"
+                          >
+                            Ponastavi
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Info o privzetem delovniku */}
-                  <div className="text-[10px] text-dark-500 mt-2 ml-0 md:ml-40">
-                    {isNedelja ? 'Privzeto: zaprto' : dan.getDay() === 6 ? 'Privzeto: 08:00 – 13:00' : 'Privzeto: 08:00 – 19:00'}
-                  </div>
+                  {!isNedelja && (
+                    <div className="text-[10px] text-dark-500 mt-2 ml-0 md:ml-40">
+                      {dan.getDay() === 6 ? 'Privzeto: 08:00 – 13:00' : 'Privzeto: 08:00 – 19:00'}
+                    </div>
+                  )}
                 </div>
               )
             })}
