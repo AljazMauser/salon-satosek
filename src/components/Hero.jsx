@@ -1,4 +1,8 @@
+import { useBooking } from '../context/BookingContext'
+
 export default function Hero() {
+  const { openBooking } = useBooking()
+
   return (
     <section
       id="domov"
@@ -35,9 +39,9 @@ export default function Hero() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="#kontakt" className="btn-primary text-base md:text-lg">
+          <button onClick={() => openBooking()} className="btn-primary text-base md:text-lg">
             Naročite se zdaj
-          </a>
+          </button>
           <a
             href="#storitve"
             className="btn-outline text-base md:text-lg"

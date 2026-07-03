@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBooking } from '../context/BookingContext'
 
 const navLinks = [
   { href: '#domov', label: 'Domov' },
@@ -9,6 +10,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { openBooking } = useBooking()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-dark-900/90 backdrop-blur-md border-b border-dark-700/50">
@@ -48,9 +50,9 @@ export default function Navbar() {
                 {link.label}
               </a>
             ))}
-            <a href="#kontakt" className="btn-primary !py-2 !px-5 text-xs">
+            <button onClick={() => openBooking()} className="btn-primary !py-2 !px-5 text-xs">
               Naroči se
-            </a>
+            </button>
           </div>
 
           {/* Mobile hamburger */}
@@ -94,13 +96,12 @@ export default function Navbar() {
                 {link.label}
               </a>
             ))}
-            <a
-              href="#kontakt"
-              onClick={() => setMenuOpen(false)}
+            <button
+              onClick={() => { setMenuOpen(false); openBooking() }}
               className="btn-primary text-center !py-2 !px-5 text-xs mt-1"
             >
               Naroči se
-            </a>
+            </button>
           </div>
         </div>
       </div>

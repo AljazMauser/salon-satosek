@@ -68,7 +68,10 @@ const services = [
   },
 ]
 
+import { useBooking } from '../context/BookingContext'
+
 export default function Services() {
+  const { openBooking } = useBooking()
   return (
     <section id="storitve" className="py-20 md:py-32 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -115,9 +118,9 @@ export default function Services() {
           <p className="text-dark-400 text-sm mb-4">
             Cene so informativne. Za natančno ponudbo nas kontaktirajte.
           </p>
-          <a href="#kontakt" className="btn-primary">
+          <button onClick={() => openBooking()} className="btn-primary">
             Povprašajte po terminu
-          </a>
+          </button>
         </div>
       </div>
     </section>

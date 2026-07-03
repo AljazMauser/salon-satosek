@@ -1,0 +1,19 @@
+"""Nastavitev podatkovne baze SQLite s SQLAlchemy."""
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+DATABASE_URL = "sqlite:///./salon_satosek.db"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+def get_db():
+    """Vrne sejo za dostop do baze — uporabi se kot dependency v FastAPI."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
