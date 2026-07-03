@@ -5,7 +5,10 @@
       "Bash(git commit *)",
       "Bash(python -m uvicorn main:app --host 0.0.0.0 --port 8000)",
       "Bash(curl -s http://localhost:8000/api/storitve)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(rm -f salon_satosek.db)",
+      "Bash(python -c \"from main import app; print\\('OK'\\)\")"
     ]
   }
 }

@@ -1,3 +1,5 @@
+import { useBooking } from '../context/BookingContext'
+
 const contactInfo = [
   {
     label: 'Naslov',
@@ -32,99 +34,51 @@ const contactInfo = [
   },
 ]
 
-const workingHours = [
-  { day: 'Ponedeljek – Petek', hours: '08:00 – 19:00' },
-  { day: 'Sobota', hours: '08:00 – 13:00' },
-  { day: 'Nedelja in prazniki', hours: 'Zaprto', muted: true },
-]
-
 export default function Contact() {
+  const { openBooking } = useBooking()
+
   return (
     <section id="kontakt" className="py-20 md:py-32 px-4 sm:px-6 lg:px-8 bg-dark-800/30">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-16 md:mb-20">
           <span className="text-gold-500 text-xs md:text-sm uppercase tracking-[0.3em] font-medium">
             Stopimo v stik
           </span>
-          <h2 className="section-heading mt-3">Kontakt in delovni čas</h2>
+          <h2 className="section-heading mt-3">Kontakt</h2>
           <div className="gold-line mt-4 mb-6" />
           <p className="section-subheading">
             Pokličite nas, pišite ali se oglasite v salonu. Veselimo se vašega obiska.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-          {/* Contact info */}
-          <div>
-            <h3 className="text-2xl font-serif font-semibold text-white mb-8">
-              Kontaktni podatki
-            </h3>
-            <div className="space-y-6">
-              {contactInfo.map((item) => (
-                <div key={item.label} className="flex items-start gap-4 group">
-                  <div className="flex-shrink-0 w-10 h-10 border border-dark-600 flex items-center justify-center text-gold-500 group-hover:border-gold-500/50 group-hover:text-gold-400 transition-colors duration-300">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">
-                      {item.label}
-                    </p>
-                    {item.href ? (
-                      <a
-                        href={item.href}
-                        className="text-white hover:text-gold-400 transition-colors duration-300 text-base md:text-lg"
-                      >
-                        {item.value}
-                      </a>
-                    ) : (
-                      <p className="text-white text-base md:text-lg">{item.value}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Working hours */}
-          <div>
-            <h3 className="text-2xl font-serif font-semibold text-white mb-8">
-              Delovni čas
-            </h3>
-            <div className="bg-dark-800/80 border border-dark-700/50 p-8">
-              <div className="space-y-4">
-                {workingHours.map((entry) => (
-                  <div
-                    key={entry.day}
-                    className="flex items-center justify-between py-3 border-b border-dark-700/50 last:border-b-0"
-                  >
-                    <span className={`text-sm md:text-base ${entry.muted ? 'text-dark-500' : 'text-dark-200'}`}>
-                      {entry.day}
-                    </span>
-                    <span
-                      className={`font-semibold text-sm md:text-base ${
-                        entry.muted ? 'text-dark-500' : 'text-gold-400'
-                      }`}
-                    >
-                      {entry.hours}
-                    </span>
-                  </div>
-                ))}
+        {/* Contact cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {contactInfo.map((item) => (
+            <div key={item.label} className="bg-dark-800/80 border border-dark-700/50 p-6 flex flex-col items-center text-center group hover:border-gold-500/30 transition-all duration-500">
+              <div className="w-12 h-12 border border-dark-600 flex items-center justify-center text-gold-500 group-hover:border-gold-500/50 group-hover:text-gold-400 transition-colors duration-300 mb-4">
+                {item.icon}
               </div>
+              <p className="text-dark-400 text-xs uppercase tracking-wider mb-2">{item.label}</p>
+              {item.href ? (
+                <a href={item.href} className="text-white hover:text-gold-400 transition-colors duration-300">
+                  {item.value}
+                </a>
+              ) : (
+                <p className="text-white">{item.value}</p>
+              )}
             </div>
+          ))}
+        </div>
 
-            {/* Quick CTA */}
-            <div className="mt-8 text-center lg:text-left">
-              <a href="tel:+38651651007" className="btn-primary w-full sm:w-auto text-center">
-                <span className="flex items-center justify-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z" />
-                  </svg>
-                  Pokličite 051 651 007
-                </span>
-              </a>
-            </div>
-          </div>
+        {/* CTA buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button onClick={() => openBooking()} className="btn-primary text-center">
+            Naročite se prek spleta
+          </button>
+          <a href="tel:+38651651007" className="btn-outline text-center">
+            Pokličite 051 651 007
+          </a>
         </div>
       </div>
     </section>

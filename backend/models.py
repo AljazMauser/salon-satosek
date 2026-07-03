@@ -1,7 +1,7 @@
 """SQLAlchemy modeli za bazo podatkov."""
 
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum
+from datetime import datetime, date, time
+from sqlalchemy import Column, Integer, String, Float, Date, Time, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 import enum
 
@@ -40,3 +40,19 @@ class Narocilo(Base):
     ustvarjeno = Column(DateTime, default=datetime.utcnow)
 
     storitev = relationship("Storitev", back_populates="narocila")
+
+
+class DelovniCas(Base):
+    """Nastavljiv delovni čas za posamezen dan.
+    - Če vrstica NE obstaja: uporabi se privzeti delovnik (pon-pet 8-19, sob 8-13, ned zaprto).
+    - Če vrstica obstaja in ima od/do nastavljen: uporabi se ta čas.
+    - Če vrstica obstaja in je prost_dan=True: salon je ta dan zaprt.
+    """
+
+    __tablename__ = "delovni_cas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    datum = Column(Date, nullable=False, unique=True, index=True)
+    od = Column(Time, nullable=True)   # None = prost dan ali ni nastavljeno
+    do = Column(Time, nullable=True)   # None = prost dan ali ni nastavljeno
+    prost_dan = Column(String(1), nullable=False, default="N")  # "D" = prost dan, "N" = delovni dan

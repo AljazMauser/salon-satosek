@@ -13,10 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import engine, get_db, Base
-from models import Narocilo, Storitev, StatusNarocila
+from models import DelovniCas, Narocilo, Storitev, StatusNarocila
 from schemas import (
     AdminLogin,
     AdminToken,
+    DelovniCasOut,
+    DelovniCasUpdate,
     NarociloCreate,
     NarociloOut,
     ProstiTerminiOut,
@@ -31,26 +33,30 @@ from seed import seed_storitve
 
 ADMIN_GESLO = "satosek2024"  # privzeto geslo — spremeni v produkciji
 
-# Delovni čas salona
-DELOVNI_CAS = {
-    0: None,                    # Ponedeljek: 08:00–19:00
-    1: None,                    # Torek
-    2: None,                    # Sreda
-    3: None,                    # Četrtek
-    4: None,                    # Petek
-    5: (time(8, 0), time(13, 0)),  # Sobota: 08:00–13:00
-    6: None,                    # Nedelja: ZAPRTO
+# Privzeti delovni čas (če v bazi ni nastavljeno)
+PRIVZETI_DELOVNIK = {
+    0: (time(8, 0), time(19, 0)),  # Pon
+    1: (time(8, 0), time(19, 0)),  # Tor
+    2: (time(8, 0), time(19, 0)),  # Sre
+    3: (time(8, 0), time(19, 0)),  # Cet
+    4: (time(8, 0), time(19, 0)),  # Pet
+    5: (time(8, 0), time(13, 0)),  # Sob
+    6: None,                        # Ned — zaprto
 }
 
-DELOVNI_CAS_DEFAULT = (time(8, 0), time(19, 0))  # Pon–Pet
 
+def delovni_cas_za_dan(db: Session, d: date) -> tuple[time, time] | None:
+    """Vrne (od, do) za dan. Najprej preveri bazo, nato privzete nastavitve."""
+    # Preveri, če obstaja ročna nastavitev v bazi
+    nastavitev = db.query(DelovniCas).filter(DelovniCas.datum == d).first()
+    if nastavitev is not None:
+        if nastavitev.prost_dan == "D":
+            return None  # frizerka je nastavila prost dan
+        if nastavitev.od is not None and nastavitev.do is not None:
+            return (nastavitev.od, nastavitev.do)
 
-def delovni_cas_za_dan(d: date) -> tuple[time, time] | None:
-    """Vrne (od, do) za dan v tednu ali None, če je salon zaprt."""
-    spec = DELOVNI_CAS.get(d.weekday(), DELOVNI_CAS_DEFAULT)
-    if spec is None:
-        return DELOVNI_CAS_DEFAULT if d.weekday() < 5 else None
-    return spec
+    # Sicer uporabi privzeti delovnik
+    return PRIVZETI_DELOVNIK.get(d.weekday())
 
 
 # ---------------------------------------------------------------------------
@@ -89,13 +95,13 @@ def on_startup():
 # Pomožne funkcije
 # ---------------------------------------------------------------------------
 
-def generiraj_termine(d: date, trajanje_minut: int) -> list[str]:
+def generiraj_termine(db: Session, d: date, trajanje_minut: int) -> list[str]:
     """
     Generira vse možne termine za dani datum glede na delovni čas.
     Termini so na vsakih 30 minut, zadnji možen začetek je
     (konec delovnika - trajanje storitve).
     """
-    ure = delovni_cas_za_dan(d)
+    ure = delovni_cas_za_dan(db, d)
     if ure is None:
         return []  # zaprto
 
@@ -114,7 +120,7 @@ def generiraj_termine(d: date, trajanje_minut: int) -> list[str]:
 
 def prosti_termini_za_dan(db: Session, d: date, trajanje_minut: int) -> list[str]:
     """Vrne samo tiste termine, ki ne konfliktirajo z obstoječimi naročili."""
-    vsi = generiraj_termine(d, trajanje_minut)
+    vsi = generiraj_termine(db, d, trajanje_minut)
 
     if not vsi:
         return []
@@ -205,7 +211,7 @@ def vrni_proste_termine(
         raise HTTPException(status_code=404, detail="Storitev ne obstaja.")
 
     # Preveri delovni čas
-    if delovni_cas_za_dan(d) is None:
+    if delovni_cas_za_dan(db, d) is None:
         return ProstiTerminiOut(datum=datum, prosti_termini=[])
 
     prosti = prosti_termini_za_dan(db, d, storitev.trajanje_minut)
@@ -230,7 +236,7 @@ def ustvari_narocilo(podatki: NarociloCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Datum ne more biti v preteklosti.")
 
     # Preveri delovni čas
-    ure = delovni_cas_za_dan(d)
+    ure = delovni_cas_za_dan(db, d)
     if ure is None:
         raise HTTPException(status_code=400, detail="Salon je na izbrani dan zaprt.")
 
@@ -343,6 +349,134 @@ def admin_odjava(admin_token: str = Query(...)):
     """Odjava iz admin panela."""
     admin_sessions.discard(admin_token)
     return {"sporocilo": "Uspešno odjavljeni."}
+
+
+# --- Admin: Delovni čas ---
+
+@app.get("/api/delovni-cas", response_model=list[DelovniCasOut], tags=["Admin"])
+def vrni_delovni_cas(
+    od: str = Query(..., description="Zacetni datum YYYY-MM-DD"),
+    do: str = Query(..., description="Koncni datum YYYY-MM-DD"),
+    admin_token: str = Query(..., description="Admin avtorizacijski zeton"),
+    db: Session = Depends(get_db),
+):
+    """Vrne nastavitve delovnega casa za datumsko obdobje."""
+    if admin_token not in admin_sessions:
+        raise HTTPException(status_code=401, detail="Neveljaven admin zeton.")
+
+    od_date = date.fromisoformat(od)
+    do_date = date.fromisoformat(do)
+
+    nastavitve = (
+        db.query(DelovniCas)
+        .filter(DelovniCas.datum >= od_date, DelovniCas.datum <= do_date)
+        .order_by(DelovniCas.datum)
+        .all()
+    )
+
+    # Vrni tudi privzete za dneve brez nastavitev
+    result = []
+    d = od_date
+    while d <= do_date:
+        obstojeca = next((n for n in nastavitve if n.datum == d), None)
+        if obstojeca:
+            result.append(DelovniCasOut(
+                datum=obstojeca.datum,
+                od=obstojeca.od.strftime("%H:%M") if obstojeca.od else None,
+                do=obstojeca.do.strftime("%H:%M") if obstojeca.do else None,
+                prost_dan=obstojeca.prost_dan,
+            ))
+        else:
+            privzeta = PRIVZETI_DELOVNIK.get(d.weekday())
+            if privzeta is not None:
+                result.append(DelovniCasOut(
+                    datum=d,
+                    od=privzeta[0].strftime("%H:%M"),
+                    do=privzeta[1].strftime("%H:%M"),
+                    prost_dan="N",
+                ))
+            else:
+                result.append(DelovniCasOut(
+                    datum=d,
+                    od=None, do=None, prost_dan="D",
+                ))
+        d += timedelta(days=1)
+
+    return result
+
+
+@app.put("/api/delovni-cas/{datum}", response_model=DelovniCasOut, tags=["Admin"])
+def nastavi_delovni_cas(
+    datum: str,
+    podatki: DelovniCasUpdate,
+    admin_token: str = Query(..., description="Admin avtorizacijski zeton"),
+    db: Session = Depends(get_db),
+):
+    """Nastavi delovni cas za dolocen dan. Poslji prost_dan='D' za prost dan."""
+    if admin_token not in admin_sessions:
+        raise HTTPException(status_code=401, detail="Neveljaven admin zeton.")
+
+    try:
+        d = date.fromisoformat(datum)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Napacen format datuma.")
+
+    if podatki.prost_dan == "D":
+        # Prosti dan
+        od_val, do_val = None, None
+    else:
+        if not podatki.od or not podatki.do:
+            raise HTTPException(status_code=400, detail="Vnesi od in do za delovni dan.")
+        try:
+            h_od, m_od = map(int, podatki.od.split(":"))
+            h_do, m_do = map(int, podatki.do.split(":"))
+            od_val = time(h_od, m_od)
+            do_val = time(h_do, m_do)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Napacen format ure (uporabi HH:MM).")
+
+    # Ustvari ali posodobi
+    nastavitev = db.query(DelovniCas).filter(DelovniCas.datum == d).first()
+    if nastavitev:
+        nastavitev.od = od_val
+        nastavitev.do = do_val
+        nastavitev.prost_dan = podatki.prost_dan
+    else:
+        nastavitev = DelovniCas(datum=d, od=od_val, do=do_val, prost_dan=podatki.prost_dan)
+        db.add(nastavitev)
+
+    db.commit()
+    db.refresh(nastavitev)
+
+    return DelovniCasOut(
+        datum=nastavitev.datum,
+        od=nastavitev.od.strftime("%H:%M") if nastavitev.od else None,
+        do=nastavitev.do.strftime("%H:%M") if nastavitev.do else None,
+        prost_dan=nastavitev.prost_dan,
+    )
+
+
+@app.delete("/api/delovni-cas/{datum}", tags=["Admin"])
+def ponastavi_delovni_cas(
+    datum: str,
+    admin_token: str = Query(..., description="Admin avtorizacijski zeton"),
+    db: Session = Depends(get_db),
+):
+    """Izbrisi rocno nastavitev delovnega casa — vrne na privzeti delovnik."""
+    if admin_token not in admin_sessions:
+        raise HTTPException(status_code=401, detail="Neveljaven admin zeton.")
+
+    try:
+        d = date.fromisoformat(datum)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Napacen format datuma.")
+
+    nastavitev = db.query(DelovniCas).filter(DelovniCas.datum == d).first()
+    if nastavitev:
+        db.delete(nastavitev)
+        db.commit()
+
+    return {"sporocilo": "Nastavitev izbrisana — uporablja se privzeti delovnik."}
 
 
 # --- Pomožna funkcija ---

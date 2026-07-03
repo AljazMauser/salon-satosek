@@ -59,3 +59,23 @@ export function updateStatus(narociloId, status, token) {
     body: JSON.stringify({ status }),
   })
 }
+
+/** Admin: vrni nastavitve delovnega časa za obdobje. */
+export function fetchDelovniCas(od, do_, token) {
+  return request(`/api/delovni-cas?od=${od}&do=${do_}&admin_token=${token}`)
+}
+
+/** Admin: nastavi delovni čas za dan. */
+export function setDelovniCas(datum, data, token) {
+  return request(`/api/delovni-cas/${datum}?admin_token=${token}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+/** Admin: izbriši ročno nastavitev — ponastavi na privzeto. */
+export function resetDelovniCas(datum, token) {
+  return request(`/api/delovni-cas/${datum}?admin_token=${token}`, {
+    method: 'DELETE',
+  })
+}

@@ -1,7 +1,7 @@
 """Pydantic sheme za validacijo API zahtevkov in odgovorov."""
 
-from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from datetime import date, datetime, time
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
@@ -72,3 +72,21 @@ class AdminLogin(BaseModel):
 
 class AdminToken(BaseModel):
     token: str
+
+
+# --- Delovni čas ---
+
+class DelovniCasOut(BaseModel):
+    datum: date
+    od: Optional[str] = None   # "HH:MM" ali None
+    do: Optional[str] = None   # "HH:MM" ali None
+    prost_dan: str             # "D" ali "N"
+
+    class Config:
+        from_attributes = True
+
+
+class DelovniCasUpdate(BaseModel):
+    od: Optional[str] = None   # "HH:MM", ali None če prost dan
+    do: Optional[str] = None   # "HH:MM", ali None če prost dan
+    prost_dan: str = "N"       # "D" = prost dan, "N" = delovni dan
