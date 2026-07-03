@@ -40,6 +40,20 @@ const STATUS_BARVE = {
 
 const DNI_V_TEDNU = ['Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja']
 
+// Generiraj ure na 30-minutne intervale (06:00–22:00)
+function generirajUre() {
+  const ure = []
+  for (let h = 6; h <= 22; h++) {
+    for (const m of ['00', '30']) {
+      if (h === 22 && m === '30') break // zadnji termin 22:00
+      ure.push(`${String(h).padStart(2, '0')}:${m}`)
+    }
+  }
+  return ure
+}
+
+const URE_OPCIJE = generirajUre()
+
 // ---------------------------------------------------------------------------
 // Admin komponenta
 // ---------------------------------------------------------------------------
@@ -349,38 +363,47 @@ export default function Admin({ token, onLogout }) {
             {dnevi.map((dan) => {
               const datumStr = fmtDate(dan)
               const isNedelja = dan.getDay() === 0
-              const stanje = urejanje[datumStr] || { od: '', do: '', prost_dan: isNedelja ? 'D' : 'N' }
+              const today = new Date(); today.setHours(0,0,0,0)
+              const isPreteklost = dan < today
               const isToday = sameDay(dan, new Date())
+              const stanje = urejanje[datumStr] || { od: '', do: '', prost_dan: (isNedelja || isPreteklost) ? 'D' : 'N' }
+              const onemogoceno = isNedelja || isPreteklost
 
               return (
-                <div key={datumStr} className={`border p-4 md:p-5 transition-colors ${isToday ? 'border-gold-500/40 bg-dark-800' : 'border-dark-700 bg-dark-800/30'} ${isNedelja ? 'opacity-70' : ''}`}>
+                <div key={datumStr} className={`border p-4 md:p-5 transition-colors ${isToday ? 'border-gold-500/40 bg-dark-800' : 'border-dark-700 bg-dark-800/30'} ${onemogoceno ? 'opacity-50' : ''}`}>
                   <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                     {/* Dan */}
                     <div className="w-full md:w-40 flex-shrink-0">
-                      <div className="text-xs text-dark-500 uppercase">{dan.toLocaleDateString('sl-SI', { weekday: 'long' })}</div>
-                      <div className={`text-lg font-serif font-bold ${isToday ? 'text-gold-400' : 'text-white'}`}>
+                      <div className="text-xs text-dark-500 uppercase">
+                        {dan.toLocaleDateString('sl-SI', { weekday: 'long' })}
+                        {isPreteklost && <span className="ml-1 text-dark-600">(preteklo)</span>}
+                      </div>
+                      <div className={`text-lg font-serif font-bold ${isToday ? 'text-gold-400' : isPreteklost ? 'text-dark-500' : 'text-white'}`}>
                         {dan.getDate()}. {dan.toLocaleDateString('sl-SI', { month: 'long' })}
                       </div>
                     </div>
 
-                    {/* Nedelja — vedno zaprto */}
-                    {isNedelja ? (
+                    {/* Nedelja ali preteklost — zaklenjeno */}
+                    {onemogoceno ? (
                       <div className="flex-1 flex items-center gap-3">
-                        <span className="px-4 py-2 text-xs font-semibold uppercase tracking-wider border bg-red-500/10 border-red-500/50 text-red-400 flex-shrink-0">
-                          🔒 Prosti dan
+                        <span className="px-4 py-2 text-xs font-semibold uppercase tracking-wider border bg-dark-700/50 border-dark-600 text-dark-500 flex-shrink-0">
+                          🔒 {isNedelja ? 'Prosti dan' : 'Zaklenjeno'}
                         </span>
-                        <span className="text-dark-500 text-xs">Nedelje so vedno zaprte.</span>
+                        <span className="text-dark-600 text-xs">
+                          {isNedelja ? 'Nedelje so vedno zaprte.' : 'Preteklih dni ni mogoče urejati.'}
+                        </span>
                       </div>
                     ) : (
                       <>
                         {/* Prost dan toggle */}
                         <button
                           onClick={() => handleToggleProstDan(datumStr)}
+                          disabled={onemogoceno}
                           className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border transition-all flex-shrink-0 ${
                             stanje.prost_dan === 'D'
                               ? 'bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20'
                               : 'bg-dark-700 border-dark-600 text-dark-300 hover:border-gold-500/40 hover:text-gold-400'
-                          }`}
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           {stanje.prost_dan === 'D' ? '🔴 Prost dan' : '🟢 Delovni dan'}
                         </button>
@@ -388,21 +411,37 @@ export default function Admin({ token, onLogout }) {
                         {/* Časovni vnosi (samo če ni prost dan) */}
                         {stanje.prost_dan === 'N' && (
                           <div className="flex items-center gap-2 md:gap-3 flex-1">
-                            <input
-                              type="time"
-                              step="1800"
+                            <select
                               value={stanje.od}
                               onChange={(e) => handleUrejanjeChange(datumStr, 'od', e.target.value)}
-                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
-                            />
+                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-36 focus:border-gold-500 outline-none transition-colors appearance-none cursor-pointer"
+                              style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C9A96E' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'right 8px center',
+                                paddingRight: '28px',
+                              }}
+                            >
+                              {URE_OPCIJE.map((u) => (
+                                <option key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
                             <span className="text-dark-500 text-sm">do</span>
-                            <input
-                              type="time"
-                              step="1800"
+                            <select
                               value={stanje.do}
                               onChange={(e) => handleUrejanjeChange(datumStr, 'do', e.target.value)}
-                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-32 focus:border-gold-500 outline-none transition-colors"
-                            />
+                              className="bg-dark-900 border border-dark-600 text-white px-3 py-2 text-sm w-36 focus:border-gold-500 outline-none transition-colors appearance-none cursor-pointer"
+                              style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C9A96E' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'right 8px center',
+                                paddingRight: '28px',
+                              }}
+                            >
+                              {URE_OPCIJE.map((u) => (
+                                <option key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
                           </div>
                         )}
 
@@ -428,7 +467,7 @@ export default function Admin({ token, onLogout }) {
                   </div>
 
                   {/* Info o privzetem delovniku */}
-                  {!isNedelja && (
+                  {!onemogoceno && (
                     <div className="text-[10px] text-dark-500 mt-2 ml-0 md:ml-40">
                       {dan.getDay() === 6 ? 'Privzeto: 08:00 – 13:00' : 'Privzeto: 08:00 – 19:00'}
                     </div>
