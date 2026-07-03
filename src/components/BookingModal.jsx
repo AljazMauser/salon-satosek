@@ -154,10 +154,6 @@ export default function BookingModal() {
     setOddaja(true)
     setNapaka(null)
 
-    const [h, m] = izbranTermin.split(':')
-    const datumUra = new Date(izbranDatum)
-    datumUra.setHours(parseInt(h), parseInt(m), 0, 0)
-
     try {
       await createNarocilo({
         stranka_ime: ime.trim(),
@@ -165,7 +161,8 @@ export default function BookingModal() {
         stranka_tel: tel.trim(),
         stranka_email: email.trim(),
         storitev_id: izbranaStoritev.id,
-        datum_ura: datumUra.toISOString(),
+        datum: fmtDate(izbranDatum),
+        ura: izbranTermin,
         opomba: opomba.trim() || null,
       })
       setUspeh(true)

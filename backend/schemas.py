@@ -37,7 +37,8 @@ class NarociloCreate(BaseModel):
     stranka_tel: str = Field(..., min_length=1, max_length=20)
     stranka_email: str = Field(..., max_length=150)
     storitev_id: int
-    datum_ura: datetime  # ISO format, npr. "2026-07-15T10:00:00"
+    datum: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="Datum v formatu YYYY-MM-DD")
+    ura: str = Field(..., pattern=r"^\d{2}:\d{2}$", description="Ura v formatu HH:MM")
     opomba: Optional[str] = Field(None, max_length=500)
 
 

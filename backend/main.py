@@ -230,8 +230,18 @@ def ustvari_narocilo(podatki: NarociloCreate, db: Session = Depends(get_db)):
     if not storitev:
         raise HTTPException(status_code=404, detail="Storitev ne obstaja.")
 
-    # Validacija datuma
-    d = podatki.datum_ura.date()
+    # Parsiraj datum in uro iz čistih stringov (brez časovnih pasov)
+    try:
+        d = date.fromisoformat(podatki.datum)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Napačen format datuma. Uporabi YYYY-MM-DD.")
+
+    try:
+        h, m = map(int, podatki.ura.split(":"))
+        ura_termina = time(h, m)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="Napačen format ure. Uporabi HH:MM.")
+
     if d < date.today():
         raise HTTPException(status_code=400, detail="Datum ne more biti v preteklosti.")
 
@@ -241,7 +251,6 @@ def ustvari_narocilo(podatki: NarociloCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Salon je na izbrani dan zaprt.")
 
     od, do = ure
-    ura_termina = podatki.datum_ura.time()
     konec_termina = (
         datetime.combine(d, ura_termina) + timedelta(minutes=storitev.trajanje_minut)
     ).time()
@@ -252,10 +261,30 @@ def ustvari_narocilo(podatki: NarociloCreate, db: Session = Depends(get_db)):
             detail=f"Termin je izven delovnega časa ({od.strftime('%H:%M')}–{do.strftime('%H:%M')}).",
         )
 
-    # Preveri, da termin ni že zaseden
+    # --- Preprečevanje dvojnih rezervacij ---
+    # Preveri, če že obstaja aktivno naročilo za isti datum in uro
+    datum_ura = datetime.combine(d, ura_termina)
+    obstojece = (
+        db.query(Narocilo)
+        .filter(
+            Narocilo.datum_ura == datum_ura,
+            Narocilo.status == StatusNarocila.POTRJENO,
+        )
+        .first()
+    )
+    if obstojece:
+        raise HTTPException(
+            status_code=400,
+            detail="Ta termin je bil ravnokar zaseden. Prosimo, izberite drug čas.",
+        )
+
+    # Preveri tudi prekrivanje terminov (upošteva trajanje storitve)
     prosti = prosti_termini_za_dan(db, d, storitev.trajanje_minut)
     if ura_termina.strftime("%H:%M") not in prosti:
-        raise HTTPException(status_code=409, detail="Termin je žal že zaseden.")
+        raise HTTPException(
+            status_code=400,
+            detail="Ta termin je bil ravnokar zaseden. Prosimo, izberite drug čas.",
+        )
 
     # Ustvari naročilo
     narocilo = Narocilo(
@@ -264,7 +293,7 @@ def ustvari_narocilo(podatki: NarociloCreate, db: Session = Depends(get_db)):
         stranka_tel=podatki.stranka_tel,
         stranka_email=podatki.stranka_email,
         storitev_id=podatki.storitev_id,
-        datum_ura=podatki.datum_ura,
+        datum_ura=datum_ura,
         opomba=podatki.opomba,
         status=StatusNarocila.POTRJENO,
     )
