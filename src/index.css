@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-dark-900 text-white font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-gold-500/30 text-gold-200;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-block px-8 py-4 bg-gold-500 text-dark-900 font-semibold
+           rounded-sm tracking-wide uppercase text-sm
+           hover:bg-gold-400 hover:shadow-lg hover:shadow-gold-500/20
+           transition-all duration-300;
+  }
+
+  .btn-outline {
+    @apply inline-block px-8 py-4 border border-gold-500 text-gold-400
+           font-semibold rounded-sm tracking-wide uppercase text-sm
+           hover:bg-gold-500/10 hover:border-gold-400
+           transition-all duration-300;
+  }
+
+  .section-heading {
+    @apply text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-gold-400 mb-4;
+  }
+
+  .section-subheading {
+    @apply text-dark-300 text-lg max-w-2xl mx-auto;
+  }
+
+  .gold-line {
+    @apply w-16 h-[2px] bg-gold-500 mx-auto;
+  }
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  z-index: 0;
+}
