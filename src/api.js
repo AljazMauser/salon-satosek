@@ -1,9 +1,10 @@
 /**
  * API pomočnik za komunikacijo s FastAPI backendom.
- * V produkciji spremeni BASE_URL na pravi URL strežnika.
+ * V razvoju Vite proxy posreduje /api klice na localhost:8000.
+ * V produkciji naj bo frontend in backend na isti domeni.
  */
 
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = ''  // prazno = relativne poti (Vite proxy v razvoju)
 
 async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`

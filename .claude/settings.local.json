@@ -4,7 +4,8 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(python -m uvicorn main:app --host 0.0.0.0 --port 8000)",
-      "Bash(curl -s http://localhost:8000/api/storitve)"
+      "Bash(curl -s http://localhost:8000/api/storitve)",
+      "Bash(git push *)"
     ]
   }
 }
